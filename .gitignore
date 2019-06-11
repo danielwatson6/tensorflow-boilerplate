@@ -1,0 +1,14 @@
+# This repository
+env/
+model_files/
+
+# Python
+*.py[cod]
+__pycache__/
+
+# macOS
+Icon?
+.DS_Store
+
+# IDEs
+.vscode/
