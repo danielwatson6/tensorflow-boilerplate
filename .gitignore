@@ -1,6 +1,9 @@
 # This repository
 env/
-model_files/
+data/*
+!data/nothing.txt
+model_files/*
+!model_files/nothing.txt
 
 # Python
 *.py[cod]
