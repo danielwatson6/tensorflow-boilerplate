@@ -109,6 +109,8 @@ class MyDataLoader(tfbp.DataLoader):
         # training and validation dataset instances for training. You have access to
         # `self.method` and `self.hparams`, just like in the `tfbp.Model` class.
         ...
+```
+
 
 ### `run.py`
 
