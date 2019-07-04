@@ -1,5 +1,7 @@
-from argparse import ArgumentParser
 from collections import namedtuple
+import json
+import os
+import sys
 
 import tensorflow as tf
 
@@ -10,8 +12,8 @@ def Hyperparameters(value):
     t = type(value)
     b = t.__bases__
     if len(b) == 1 and b[0] == tuple:
-        f = getattr(t, "_fields", None)
-        if isinstance(f, tuple) and all(type(n) == str for n in f):
+        fields = getattr(t, "_fields", None)
+        if isinstance(fields, tuple) and all(type(name) == str for name in fields):
             return value
 
     _Hyperparameters = namedtuple("Hyperparameters", value.keys())
@@ -19,27 +21,81 @@ def Hyperparameters(value):
 
 
 class Model(tf.keras.Model):
-    hparams = {}
+    default_hparams = {}
 
-    def __init__(self):
-        self.hparams = Hyperparameters(self.hparams)
+    def __init__(self, save_dir, training=True, **hparams):
+        super().__init__()
+        self._save_dir = save_dir
+        self._training = training
+        self.hparams = {**self.default_hparams, **hparams}
+        self._ckpt = None
+
+        hparams_path = os.path.join(self.save_dir, "hparams.json")
+        if os.path.isfile(hparams_path):
+            with open(hparams_path) as f:
+                self.hparams = json.load(f)
+        else:
+            if not os.path.exists(self.save_dir):
+                os.makedirs(self.save_dir)
+            with open(hparams_path, "w") as f:
+                json.dump(self.hparams._asdict(), f, indent=4, sort_keys=True)
+
+    @property
+    def save_dir(self):
+        return self._save_dir
+
+    @property
+    def training(self):
+        return self._training
+
+    @property
+    def hparams(self):
+        return self._hparams
 
     @hparams.setter
     def hparams(self, value):
         self._hparams = Hyperparameters(value)
 
-    def get_parser(self):
-        parser = ArgumentParser()
-        parser.add_argument("model", type=str)
-        parser.add_argument("save_dir", type=str)
-        parser.add_argument("--batch_size", type=int, default=32)
-        parser.add_argument("--epochs", type=int, default=32)
-        for name, default_value in self.hparams._asdict().items():
-            parser.add_argument(f"--{name}", type=type(value), default=value)
-        return parser.parse_args()
+    def save(self):
+        if self._ckpt is None:
+            self._ckpt = tf.train.Checkpoint(model=self)
+        self._ckpt.save(file_prefix=os.path.join(self._save_dir, "model"))
+
+    def restore(self):
+        if self._ckpt is None:
+            self._ckpt = tf.train.Checkpoint(model=self)
+        self._ckpt.restore(tf.train.latest_checkpoint(self._save_dir))
 
 
-def default_export(cls):
+class DataLoader:
+    default_hparams = {}
+
+    def __init__(self, training=True, **hparams):
+        self._training = training
+        self.hparams = {**self.default_hparams, **hparams}
+        self._data = self.load()
+
+    @property
+    def training(self):
+        return self._training
+
+    @property
+    def hparams(self):
+        return self._hparams
+
+    @hparams.setter
+    def hparams(self, value):
+        self._hparams = Hyperparameters(value)
+
+    @property
+    def data(self):
+        return self._data
+
+    def load(self):
+        raise NotImplementedError
+
+
+def default_export(x):
     """Decorator to make a class or method the imported object of a module."""
-    sys.modules[cls.__module__] = cls
-    return cls
+    sys.modules[x.__module__] = x
+    return x
