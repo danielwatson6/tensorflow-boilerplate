@@ -4,7 +4,7 @@ This repository contains a simple workflow to work efficiently with TensorFlow 2
 
 ## Setup
 
-*No dependencies needed besides Python 3.7.3 and TensorFlow 2.0.0b0.* Start developing your new model on top of this workflow by cloning this repository:
+**No dependencies needed besides Python 3.7.3 and TensorFlow 2.0.0b0.** Start developing your new model on top of this workflow by cloning this repository:
 
 ```bash
 git clone https://github.com/danielwatson6/tensorflow-boilerplate.git
@@ -124,4 +124,4 @@ Run any of your model's bound methods (e.g. `fit` or `evaluate`) as follows:
 python run.py [method] [model] [save_dir] [model] [data_loader] [hparams...]
 ```
 
-*If `save_dir` already has a model, only the first two arguments are required.*
+**If `save_dir` already has a model, only the first two arguments are required.**
