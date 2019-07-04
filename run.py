@@ -38,12 +38,11 @@ if __name__ == "__main__":
         parser.add_argument(f"--{name}", type=type(value), default=value)
 
     FLAGS = parser.parse_args()
-    hparams = {k: v for k, v in FLAGS._get_kwargs()}
+    kwargs = {k: v for k, v in FLAGS._get_kwargs()}
 
-    del hparams["method"]
-    del hparams["model"]
-    del hparams["save_dir"]
-    del hparams["data_loader"]
+    del kwargs["model"]
+    del kwargs["save_dir"]
+    del kwargs["data_loader"]
 
     model = Model(os.path.join("experiments", FLAGS.save_dir), **hparams)
     dataset = DataLoader(**hparams).data

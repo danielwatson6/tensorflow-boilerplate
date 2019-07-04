@@ -23,10 +23,10 @@ def Hyperparameters(value):
 class Model(tf.keras.Model):
     default_hparams = {}
 
-    def __init__(self, save_dir, training=True, **hparams):
+    def __init__(self, save_dir=None, method=None, **hparams):
         super().__init__()
         self._save_dir = save_dir
-        self._training = training
+        self._method = method
         self.hparams = {**self.default_hparams, **hparams}
         self._ckpt = None
 
@@ -45,8 +45,8 @@ class Model(tf.keras.Model):
         return self._save_dir
 
     @property
-    def training(self):
-        return self._training
+    def method(self):
+        return self._method
 
     @property
     def hparams(self):
@@ -70,14 +70,14 @@ class Model(tf.keras.Model):
 class DataLoader:
     default_hparams = {}
 
-    def __init__(self, training=True, **hparams):
-        self._training = training
+    def __init__(self, method=None, **hparams):
+        self._method = method
         self.hparams = {**self.default_hparams, **hparams}
         self._data = self.load()
 
     @property
-    def training(self):
-        return self._training
+    def method(self):
+        return self._method
 
     @property
     def hparams(self):
