@@ -14,13 +14,15 @@ def getcls(module_str):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
-        print(
-            "Usage:\n  New run: python run.py [method] [save_dir] [model] [data_loader]"
-            " [hyperparameters...]\n  Existing run: python run.py [method] [save_dir] "
-            "[data_loader]? [hyperparameters...]",
-            file=sys.stderr,
-        )
+
+    USAGE = (
+        "Usage:\n  New model: run [method] [save_dir] [model] [data_loader] "
+        "[hyperparameters...]\n  Load model: run [method] [save_dir] [data_loader]? "
+        "[hyperparameters...]"
+    )
+
+    if len(sys.argv) < 3:
+        print(USAGE, file=sys.stderr)
         exit(1)
 
     # TODO: make it possible to infer the model and data_loader fields by reading the
@@ -33,27 +35,36 @@ if __name__ == "__main__":
     # If runpy.json exists, the model and the data loader classes can be inferred and
     # the data loader can be optionally switched. These need to be loaded to get the
     # static default hyperparameters to be read by argparse.
-    runpy_json_path = os.path.join("experiments", sys.argv[2], "runpy.json")
+    save_dir_path = os.path.join("experiments", sys.argv[2])
+    runpy_json_path = os.path.join(save_dir_path, "runpy.json")
     if os.path.exists(runpy_json_path):
-
         with open(runpy_json_path) as f:
             classes = json.load(f)
 
-        if len(sys.argv) >= 4 and not sys.argv[4].startswith("--"):
-            classes["data_loader"] = sys.argv[4]
+        if len(sys.argv) > 3 and not sys.argv[3].startswith("--"):
+
+            if len(sys.argv) > 4 and not sys.argv[4].startswith("--"):
+                print(USAGE, file=sys.stderr)
+                exit(1)
+
+            classes["data_loader"] = sys.argv[3]
+            parser.add_argument("data_loader", type=str)
 
         Model = getcls("models." + classes["model"])
         DataLoader = getcls("data_loaders." + classes["data_loader"])
 
     else:
-        Model = getcls("models." + sys.argv[3])
-        DataLoader = getcls("data_loaders." + sys.argv[4])
+        if not os.path.exists(save_dir_path):
+            os.makedirs(save_dir_path)
+
+        with open(runpy_json_path, "w") as f:
+            json.dump({"model": sys.argv[3], "data_loader": sys.argv[4]}, f)
 
         parser.add_argument("model", type=str)
         parser.add_argument("data_loader", type=str)
 
-        with open(runpy_json_path, "w") as f:
-            json.dump({"model": sys.argv[3], "data_loader": sys.argv[4]}, f)
+        Model = getcls("models." + sys.argv[3])
+        DataLoader = getcls("data_loaders." + sys.argv[4])
 
     args = {}
     for name, value in Model.default_hparams.items():
@@ -67,9 +78,9 @@ if __name__ == "__main__":
     FLAGS = parser.parse_args()
     kwargs = {k: v for k, v in FLAGS._get_kwargs()}
 
-    del kwargs["model"]
-    del kwargs["save_dir"]
-    del kwargs["data_loader"]
+    for k in ["save_dir", "model", "data_loader"]:
+        if k in kwargs:
+            del kwargs[k]
 
     model = Model(os.path.join("experiments", FLAGS.save_dir), **kwargs)
     data_loader = DataLoader(**kwargs)
@@ -78,7 +89,5 @@ if __name__ == "__main__":
         model.restore()
     except Exception:
         model.save()
-        with open(os.path.join("experiments", FLAGS.save_dir, "runpy.json"), "w") as f:
-            json.dump({"model": FLAGS.model, "data_loader": FLAGS.data_loader}, f)
 
     getattr(model, FLAGS.method)(data_loader)
