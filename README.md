@@ -4,13 +4,24 @@ This repository contains a simple workflow to work efficiently with TensorFlow 2
 
 ## Setup
 
-**No dependencies needed besides Python 3.7.3 and TensorFlow 2.0.0b0.** Start developing your new model on top of this workflow by cloning this repository:
+**No dependencies needed besides Python 3.7.4, virtualenv TensorFlow 2.0.0-beta1.** Start developing your new model on top of this workflow by cloning this repository:
 
 ```bash
 git clone https://github.com/danielwatson6/tensorflow-boilerplate.git
+cd tensorflow-boilerplate
+virtualenv env
+source env.sh
+pip install tensorflow==2.0.0-beta1  # or tensorflow-gpu==2.0.0-beta1 / custom wheel
 ```
 
 ## Usage
+
+You should run `source env.sh` on each new shell session. This activates the virtualenv and creates a nice alias for `run.py`:
+```bash
+$ cat env.sh
+source env/bin/activate
+alias run='python run.py'
+```
 
 The repository contains a few directories:
 - `data`: gitignore'd directory to place data
@@ -18,16 +29,24 @@ The repository contains a few directories:
 - `data_loaders`: write your data loaders here
 - `models`: write your models here
 
-The `boilerplate` module contains two classes that are meant to be subclassed:
+Most routines involve running a command like this:
+```bash
+# Usage: run [method] [experiment_slug] [model] [data_loader] [hparams...]
+run fit myexperiment1 gan mnist --batch_size=32 --learning_rate=0.1
+```
+
+where the `model` and `data_loader` args are the module names (i.e., the file names without the `.py`). The command above would run the Keras model's `fit` method, but it could be any custom as long as it accepts a data loader instance as argument.
+
+**If `save_dir` already has a model, only the first two arguments are required, but the data loader may be changed.**
+
+Each of these modules live in their respective directories and should export a default subclass of either of the following:
 
 ```python
-
-
 tfbp.Model   # Extends `tf.keras.Model`
 tfbp.DataLoader
 ```
 
-By writing the subclasses as individual modules in the `models` or `data_loaders` directories, they can be glued together and run with `run.py` without the need to do anything else. This also allows to specify the hyperparameters needed which `run.py` can then read in the command line:
+Both of these classes have minimal functionality to allow command like parsing like shown above. Since that includes parsing hyperparameters, they can be defined statically with default values by setting `default_hparams`:
 
 ```python
 import boilerplate as tfbp
@@ -43,10 +62,14 @@ class MyModel(tfbp.Model):  # or `tfbp.DataLoader`
     }
 ```
 
+After the constructor is called, the model can access these hyperparameters, e.g., `self.hparams.learning_rate`, `self.hparams.hidden_size`, etc. `self.hparams` is a namedtuple.
+
+The method string argument received by `run.py` is also accessible in both classes as `self.method`, which can be useful to separate cases between training, inference, and other routines as needed.
+
 
 ### `tfbp.Model`
 
-Models pretty much follow the same rules as Keras models.
+Models pretty much follow the same rules as Keras models with very slight differences: the constructor's arguments should not be overriden (since the boilerplate code handles instantiation), and new `save` and `restore` methods are available.
 
 ```python
 import tensorflow as tf
@@ -57,25 +80,12 @@ class MyModel(tfbp.Model):
     default_hparams = {
         "batch_size": 32,
         "hidden_size": 512,
-        "learning_rate": 0.0.1,
+        "learning_rate": 0.01,
     }
 
     # Don't mess with the args and keyword args, `run.py` handles that.
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-
-        # As usual, all the layers are defined below to be used in `call`.
-        #
-        # NOTE: the following new methods and properties are now usable:
-        #
-        # Properties:
-        #   save_dir (str): full output path, e.g. "experiments/mymodel_run1".
-        #   method (str): the method currently running, e.g., "fit" or "evaluate".
-        #   hparams (namedtuple): the actual (not necessarily default) hyperparameters.
-        #
-        # Methods:
-        #   save: takes no arguments, saves the model
-        #   restore: takes no arguments, restores the model
 
         self.dense1 = tf.keras.layers.Dense(self.hparams.hidden_size)
         ...
@@ -85,11 +95,12 @@ class MyModel(tfbp.Model):
         ...
 ```
 
-You can also write your own training loops à la pytorch by overriding the `fit` method.
+You can also write your own training loops à la pytorch by overriding the `fit` method
+or writing a custom method that you can invoke via `run.py`.
 
 ### `tfbp.DataLoader`
 
-Same story as models, but only the `load` method needs to be written:
+Since model methods invoked by `run.py` receive a data loader instance, you may name your data loader whatever you wish and call them in your model code. A good practice is to make the data loader handle anything that is specific to a particular dataset, allowing the model to be as general as possible.
 
 ```python
 import tensorflow as tf
@@ -102,28 +113,13 @@ class MyDataLoader(tfbp.DataLoader):
     }
 
     def load(self):
-        # Whatever is returned here will be passed to one of the model's methods like
-        # `fit` or `evaluate`, whichever is specified in `run.py`.
-        #
-        # A good practice is to return a `tf.data.Dataset` instance, or separate
-        # training and validation dataset instances for training. You have access to
-        # `self.method` and `self.hparams`, just like in the `tfbp.Model` class.
-        ...
+        if self.method == "fit":
+            train_data = tf.data.TextLineDataset("data/train.txt")
+            valid_data = tf.data.TextLineDataset("data/valid.txt")
+            dataset = tf.data.Dataset.zip((train_data, valid_data)).shuffle(10000)
+
+        elif self.method == "eval":
+            dataset = tf.data.TextLineDataset("data/test.txt")
+
+        return dataset.batch(self.hparams.batch_size).prefetch(1)
 ```
-
-
-### `run.py`
-
-Run any of your model's bound methods (e.g. `fit` or `evaluate`) as follows:
-```bash
-# Args:
-#   method: model's bound method to call (passing the data loader's output)
-#   save_dir: directory name to save or restore the model
-#   model: filename (minus .py) of the model
-#   data_loader: filename (minus .py) of the data loader
-#   hparams: any hyperparameters in the format --name==value
-
-python run.py [method] [model] [save_dir] [model] [data_loader] [hparams...]
-```
-
-**If `save_dir` already has a model, only the first two arguments are required.**
