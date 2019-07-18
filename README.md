@@ -100,7 +100,7 @@ or writing a custom method that you can invoke via `run.py`.
 
 ### `tfbp.DataLoader`
 
-Since model methods invoked by `run.py` receive a data loader instance, you may name your data loader whatever you wish and call them in your model code. A good practice is to make the data loader handle anything that is specific to a particular dataset, allowing the model to be as general as possible.
+Since model methods invoked by `run.py` receive a data loader instance, you may name your data loader methods whatever you wish and call them in your model code. A good practice is to make the data loader handle anything that is specific to a particular dataset, allowing the model to be as general as possible.
 
 ```python
 import tensorflow as tf
