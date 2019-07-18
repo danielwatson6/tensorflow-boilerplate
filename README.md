@@ -37,7 +37,9 @@ run fit myexperiment1 gan mnist --batch_size=32 --learning_rate=0.1
 
 where the `model` and `data_loader` args are the module names (i.e., the file names without the `.py`). The command above would run the Keras model's `fit` method, but it could be any custom as long as it accepts a data loader instance as argument.
 
-**If `save_dir` already has a model, only the first two arguments are required, but the data loader may be changed.**
+*If `save_dir` already has a model*:
+- Only the first two arguments are required and the data loader may be changed, but respecifying the model is not allowed.
+- Specified hyperparameter values in the command line WILL override previously saved ones (for this run only, not on disk).
 
 Each of these modules live in their respective directories and should export a default subclass of either of the following:
 
