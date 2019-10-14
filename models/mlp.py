@@ -14,9 +14,12 @@ class MLP(tfbp.Model):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+
         self.forward = tf.keras.Sequential()
+
         for hidden_size in self.hparams.layer_sizes[:-1]:
             self.forward.add(tfkl.Dense(hidden_size, activation=tf.nn.relu))
+
         self.forward.add(
             tfkl.Dense(self.hparams.layer_sizes[-1], activation=tf.nn.softmax)
         )

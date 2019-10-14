@@ -4,17 +4,27 @@ This repository contains a simple workflow to work efficiently with TensorFlow 2
 
 ## Setup
 
-**No dependencies needed besides Python 3.7.4, virtualenv TensorFlow 2.0.0-beta1.** Start developing your new model on top of this workflow by cloning this repository:
+**No dependencies needed besides Python 3.7.4, virtualenv, and TensorFlow.** Start developing your new model on top of this workflow by cloning this repository:
 
 ```bash
 git clone https://github.com/danielwatson6/tensorflow-boilerplate.git
 cd tensorflow-boilerplate
 virtualenv env
 source env.sh
-pip install tensorflow==2.0.0-beta1  # or tensorflow-gpu==2.0.0-beta1 / custom wheel
+pip install tensorflow  # or tensorflow-gpu / custom wheel
 ```
 
+## Directory structure
+
+- `data`: gitignore'd, place datasets here.
+- `experiments`: gitignore'd, trained models written here.
+- `data_loaders`: write your data loaders here.
+- `models`: write your models here.
+
+
 ## Usage
+
+**Check `models/mlp.py` and `data_loaders/mnist.py` for fully working examples.**
 
 You should run `source env.sh` on each new shell session. This activates the virtualenv and creates a nice alias for `run.py`:
 ```bash
@@ -23,50 +33,17 @@ source env/bin/activate
 alias run='python run.py'
 ```
 
-The repository contains a few directories:
-- `data`: gitignore'd directory to place data
-- `experiments`: trained models written here
-- `data_loaders`: write your data loaders here
-- `models`: write your models here
-
 Most routines involve running a command like this:
 ```bash
-# Usage: run [method] [experiment_slug] [model] [data_loader] [hparams...]
+# Usage: run [method] [save_dir] [model] [data_loader] [hparams...]
 run fit myexperiment1 gan mnist --batch_size=32 --learning_rate=0.1
 ```
 
 where the `model` and `data_loader` args are the module names (i.e., the file names without the `.py`). The command above would run the Keras model's `fit` method, but it could be any custom as long as it accepts a data loader instance as argument.
 
-*If `save_dir` already has a model*:
+**If `save_dir` already has a model**:
 - Only the first two arguments are required and the data loader may be changed, but respecifying the model is not allowed.
 - Specified hyperparameter values in the command line WILL override previously saved ones (for this run only, not on disk).
-
-Each of these modules live in their respective directories and should export a default subclass of either of the following:
-
-```python
-tfbp.Model   # Extends `tf.keras.Model`
-tfbp.DataLoader
-```
-
-Both of these classes have minimal functionality to allow command like parsing like shown above. Since that includes parsing hyperparameters, they can be defined statically with default values by setting `default_hparams`:
-
-```python
-import boilerplate as tfbp
-
-# When importing this module, the read module object will be this class.
-@tfbp.default_export
-class MyModel(tfbp.Model):  # or `tfbp.DataLoader`
-
-    # Set the `default_hparams` static variable, listing every required hyperparameter.
-    default_hparams = {
-        "learning_rate": 0.01,
-        "hidden_size": 512,
-    }
-```
-
-After the constructor is called, the model can access these hyperparameters, e.g., `self.hparams.learning_rate`, `self.hparams.hidden_size`, etc. `self.hparams` is a namedtuple.
-
-The method string argument received by `run.py` is also accessible in both classes as `self.method`, which can be useful to separate cases between training, inference, and other routines as needed.
 
 
 ### `tfbp.Model`
@@ -98,7 +75,8 @@ class MyModel(tfbp.Model):
 ```
 
 You can also write your own training loops à la pytorch by overriding the `fit` method
-or writing a custom method that you can invoke via `run.py`.
+or writing a custom method that you can invoke via `run.py`. Examples of both are
+available in `models/mlp.py`.
 
 ### `tfbp.DataLoader`
 
