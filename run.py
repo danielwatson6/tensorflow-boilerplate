@@ -41,6 +41,7 @@ if __name__ == "__main__":
 
         if len(sys.argv) >= 4 and not sys.argv[3].startswith("--"):
             classes["data_loader"] = sys.argv[3]
+            parser.add_argument("data_loader", type=str)
 
         Model = getcls("models." + classes["model"])
         DataLoader = getcls("data_loaders." + classes["data_loader"])
@@ -65,7 +66,17 @@ if __name__ == "__main__":
         args[name] = value
 
     for name, value in args.items():
-        parser.add_argument(f"--{name}", type=type(value), default=value)
+        if type(value) in [list, tuple]:
+            if not len(value):
+                raise ValueError(
+                    f"Cannot infer type of hyperparameter `{name}`. Please provide a "
+                    "default value with nonzero length."
+                )
+            parser.add_argument(
+                f"--{name}", f"--{name}_", nargs="+", type=type(value[0]), default=value
+            )
+        else:
+            parser.add_argument(f"--{name}", type=type(value), default=value)
 
     FLAGS = parser.parse_args()
     kwargs = {k: v for k, v in FLAGS._get_kwargs()}
