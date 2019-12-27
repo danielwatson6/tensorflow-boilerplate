@@ -27,6 +27,7 @@ class MLP(tfbp.Model):
     def call(self, x):
         return self.forward(x)
 
+    @tfbp.runnable
     def fit(self, data_loader):
         """Example using keras training loop."""
         train_data, valid_data = data_loader.load()
@@ -45,6 +46,7 @@ class MLP(tfbp.Model):
         )
         self.save()
 
+    @tfbp.runnable
     def train(self, data_loader):
         """Example using custom training loop."""
         step = 0
@@ -75,6 +77,7 @@ class MLP(tfbp.Model):
             print(f"epoch {epoch} finished (valid_loss={loss})")
             self.save()
 
+    @tfbp.runnable
     def evaluate(self, data_loader):
         n = 0
         accuracy = 0
