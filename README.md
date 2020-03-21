@@ -14,6 +14,18 @@ source env.sh
 pip install tensorflow
 ```
 
+### (Optional) receive updates from tensorflow-boilerplate
+
+Add a `boilerplate` pull-only remote pointing to tensorflow-boilerplate, just once:
+
+```bash
+git remote add tfbp https://github.com/danielwatson6/tensorflow-boilerplate
+git remote set-url --push boilerplate -- --read-only--
+```
+
+Update the boilerplate via `git pull tfbp master` as often as needed.
+
+
 ## Directory structure
 
 - `data`: gitignore'd, place datasets here.
@@ -100,9 +112,8 @@ class MyDataLoader(tfbp.DataLoader):
             return self.prep_dataset(train_data), self.prep_dataset(valid_data)
 
         elif self.method == "eval":
-            dataset = tf.data.TextLineDataset("data/test.txt")
-
-        return dataset.batch(self.hparams.batch_size).prefetch(1)
+            test_data = tf.data.TextLineDataset("data/test.txt")
+            return self.prep_dataset(test_data)
 
     def prep_dataset(self, ds):
         return ds.batch(self.hparams.batch_size).prefetch(1)
