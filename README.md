@@ -11,7 +11,7 @@ git clone https://github.com/danielwatson6/tensorflow-boilerplate.git
 cd tensorflow-boilerplate
 virtualenv env
 source env.sh
-pip install tensorflow  # or tensorflow-gpu / custom wheel
+pip install tensorflow
 ```
 
 ## Directory structure
@@ -36,19 +36,20 @@ alias run='python run.py'
 Most routines involve running a command like this:
 ```bash
 # Usage: run [method] [save_dir] [model] [data_loader] [hparams...]
-run fit myexperiment1 gan mnist --batch_size=32 --learning_rate=0.1
+run fit myexperiment1 mlp mnist --batch_size=32 --learning_rate=0.1
 ```
 
 where the `model` and `data_loader` args are the module names (i.e., the file names without the `.py`). The command above would run the Keras model's `fit` method, but it could be any custom as long as it accepts a data loader instance as argument.
 
 **If `save_dir` already has a model**:
-- Only the first two arguments are required and the data loader may be changed, but respecifying the model is not allowed.
-- Specified hyperparameter values in the command line WILL override previously saved ones (for this run only, not on disk).
+- Only the first two arguments are required and the data loader may be changed, but respecifying the model is not allowed-- the existing model will always be used.
+- Specified hyperparameter values in the command line WILL override previously used ones
+(for this run only, not on disk).
 
 
 ### `tfbp.Model`
 
-Models pretty much follow the same rules as Keras models with very slight differences: the constructor's arguments should not be overriden (since the boilerplate code handles instantiation), and new `save` and `restore` methods are available.
+Models pretty much follow the same rules as Keras models with very slight differences: the constructor's arguments should not be overriden (since the boilerplate code handles instantiation), and the `save` and `restore` methods don't need any arguments.
 
 ```python
 import tensorflow as tf
@@ -75,12 +76,12 @@ class MyModel(tfbp.Model):
 ```
 
 You can also write your own training loops à la pytorch by overriding the `fit` method
-or writing a custom method that you can invoke via `run.py`. Examples of both are
-available in `models/mlp.py`.
+or writing a custom method that you can invoke via `run.py` simply by adding the
+`@tfbp.runnable` decorator. Examples of both are available in `models/mlp.py`.
 
 ### `tfbp.DataLoader`
 
-Since model methods invoked by `run.py` receive a data loader instance, you may name your data loader methods whatever you wish and call them in your model code. A good practice is to make the data loader handle anything that is specific to a particular dataset, allowing the model to be as general as possible.
+Since model methods invoked by `run.py` receive a data loader instance, you may name your data loader methods whatever you wish and call them in your model code. A good practice is to make the data loader handle anything that is specific to a particular dataset, which allows the model to be as general as possible.
 
 ```python
 import tensorflow as tf
@@ -92,14 +93,17 @@ class MyDataLoader(tfbp.DataLoader):
         "batch_size": 32,
     }
 
-    def load(self):
+    def __call__(self):
         if self.method == "fit":
-            train_data = tf.data.TextLineDataset("data/train.txt")
-            valid_data = tf.data.TextLineDataset("data/valid.txt")
-            dataset = tf.data.Dataset.zip((train_data, valid_data)).shuffle(10000)
+            train_data = tf.data.TextLineDataset("data/train.txt").shuffle(10000)
+            valid_data = tf.data.TextLineDataset("data/valid.txt").shuffle(10000)
+            return self.prep_dataset(train_data), self.prep_dataset(valid_data)
 
         elif self.method == "eval":
             dataset = tf.data.TextLineDataset("data/test.txt")
 
         return dataset.batch(self.hparams.batch_size).prefetch(1)
+
+    def prep_dataset(self, ds):
+        return ds.batch(self.hparams.batch_size).prefetch(1)
 ```
