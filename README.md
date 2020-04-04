@@ -7,8 +7,8 @@ This repository contains a simple workflow to work efficiently with TensorFlow 2
 **No dependencies needed besides Python 3.7.4, virtualenv, and TensorFlow.** Start developing your new model on top of this workflow by cloning this repository:
 
 ```bash
-git clone https://github.com/danielwatson6/tensorflow-boilerplate.git
-cd tensorflow-boilerplate
+git clone https://github.com/danielwatson6/tensorflow-boilerplate.git [new-repo-name]
+cd [new-repo-name]
 virtualenv env
 source env.sh
 pip install tensorflow
@@ -20,7 +20,7 @@ Add a `boilerplate` pull-only remote pointing to tensorflow-boilerplate, just on
 
 ```bash
 git remote add tfbp https://github.com/danielwatson6/tensorflow-boilerplate
-git remote set-url --push boilerplate -- --read-only--
+git remote set-url --push tfbp -- --read-only--
 ```
 
 Update the boilerplate via `git pull tfbp master` as often as needed.
