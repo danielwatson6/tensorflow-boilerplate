@@ -16,7 +16,7 @@ pip install tensorflow
 
 ### (Optional) receive updates from tensorflow-boilerplate
 
-Add a `boilerplate` pull-only remote pointing to tensorflow-boilerplate, just once:
+Add a `tfbp` pull-only remote pointing to tensorflow-boilerplate, just once:
 
 ```bash
 git remote add tfbp https://github.com/danielwatson6/tensorflow-boilerplate
