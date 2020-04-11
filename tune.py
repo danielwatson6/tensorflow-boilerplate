@@ -64,8 +64,8 @@ def search_hyperparameters(save_dir, config):
 if __name__ == "__main__":
     usage_str = (
         "Usage:\n  New run: python tune.py [save_dir] [model] [data_loader] -t "
-        "[train_method] -e [eval_method] [min|max] [tuning_options...]?\n  Existing "
-        "run: python tune.py [save_dir]"
+        "[train_method] -e [eval_method] [min|max] -a [algorithm] [tuning_options...]?\n"
+        " Existing run: python tune.py [save_dir]"
     )
     if len(sys.argv) < 2:
         print(usage_str, file=sys.stderr)
