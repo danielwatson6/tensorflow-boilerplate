@@ -10,6 +10,8 @@ __pycache__/
 
 # Virtualenv
 env/
+venv/
+virtualenv/
 
 # macOS
 Icon?
