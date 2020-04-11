@@ -1,4 +1,4 @@
-# TensorFlow Boilerplate
+# TensorFlow Boilerplate (v1.0)
 
 This repository contains a simple workflow to work efficiently with TensorFlow 2.0. It removes the need to write training scripts for each new model, as well as code gluing models and input pipelines together.
 
@@ -9,8 +9,11 @@ This repository contains a simple workflow to work efficiently with TensorFlow 2
 ```bash
 git clone https://github.com/danielwatson6/tensorflow-boilerplate.git
 cd tensorflow-boilerplate
+
+# Recommended: set up a virtualenv
 virtualenv env
 source env.sh
+
 pip install tensorflow
 ```
 
