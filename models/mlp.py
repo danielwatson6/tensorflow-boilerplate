@@ -6,34 +6,42 @@ import boilerplate as tfbp
 
 @tfbp.default_export
 class MLP(tfbp.Model):
-    default_hparams = {
-        "layer_sizes": [512, 10],
-        "learning_rate": 0.001,
-        "num_epochs": 10,
-    }
+    """Example implementation of a multilayer perceptron."""
+
+    @staticmethod
+    def hparams(hp):
+        # https://keras-team.github.io/keras-tuner/documentation/hyperparameters/
+        hp.Fixed("num_classes", 10)
+        hp.Int("num_hidden", 1, 3, default=1)
+        hp.Int("hidden_size", 128, 512, default=256, sampling="log")
+        hp.Choice("activation", ["tanh", "relu"], default="tanh")
+        hp.Float("learning_rate", 5e-4, 5e-3, default=1e-3, sampling="log")
+        hp.Float("dropout", 0.1, 0.4, default=0.1)
+        hp.Fixed("epochs", 3)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.forward = tf.keras.Sequential()
 
-        for hidden_size in self.hparams.layer_sizes[:-1]:
-            self.forward.add(tfkl.Dense(hidden_size, activation=tf.nn.relu))
-
-        self.forward.add(
-            tfkl.Dense(self.hparams.layer_sizes[-1], activation=tf.nn.softmax)
-        )
+        for _ in range(self.hp.num_hidden):
+            self.forward.add(
+                tfkl.Dense(self.hp.hidden_size, activation=self.hp.activation)
+            )
+            self.forward.add(tfkl.Dropout(self.hp.dropout))
+        self.forward.add(tfkl.Dense(self.hp.num_classes, activation=tf.math.sigmoid))
 
         self.loss = tf.losses.SparseCategoricalCrossentropy()
-        self.optimizer = tf.optimizers.Adam(self.hparams.learning_rate)
+        self.optimizer = tf.optimizers.Adam(self.hp.learning_rate)
 
+    # This is necessary when using the `compile` functionality of Keras.
     def call(self, x):
         return self.forward(x)
 
     @tfbp.runnable
     def fit(self, data_loader):
         """Example using keras training loop."""
-        train_data, valid_data = data_loader.load()
+        train_data, valid_data = data_loader()
 
         self.compile(self.optimizer, self.loss)
         super().fit(
@@ -41,7 +49,7 @@ class MLP(tfbp.Model):
             validation_data=valid_data,
             validation_steps=32,  # validate 32 batches at a time
             validation_freq=1,  # validate every 1 epoch
-            epochs=self.hparams.num_epochs,
+            epochs=self.hp.epochs,
             shuffle=False,  # dataset instances already handle shuffling
         )
         self.save()
@@ -49,41 +57,52 @@ class MLP(tfbp.Model):
     @tfbp.runnable
     def train(self, data_loader):
         """Example using custom training loop."""
-        step = 0
         train_data, valid_data = data_loader()
 
         # Allow to call `next` builtin indefinitely.
         valid_data = iter(valid_data.repeat())
 
-        for epoch in range(self.hparams.num_epochs):
+        # This is in its own function just for the sake of performance speedup. By
+        # decorating `train_fn` with `tf.function`, the train loop runs way faster.
+        self.train_fn(train_data, valid_data)
+        self.save()
+
+    @tf.function
+    def train_fn(self, train_data, valid_data):
+        step = 0
+        for epoch in range(self.hp.epochs):
             for x, y in train_data:
 
                 with tf.GradientTape() as g:
                     train_loss = self.loss(y, self(x))
 
-                grads = g.gradient(train_loss, self.trainable_variables)
-                self.optimizer.apply_gradients(zip(grads, self.trainable_variables))
+                grads = g.gradient(train_loss, self.trainable_weights)
+                self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
 
                 # Validate every 1000 training steps.
                 if step % 1000 == 0:
                     x, y = next(valid_data)
                     valid_loss = self.loss(y, self(x))
-                    print(
-                        f"step {step} (train_loss={train_loss} valid_loss={valid_loss})"
-                    )
+                    tf.print("step", step)
+                    tf.print("  train_loss:", train_loss)
+                    tf.print("  valid_loss:", valid_loss)
                 step += 1
 
-            print(f"epoch {epoch} finished")
-            self.save()
+            tf.print("epoch", epoch, "finished")
 
     @tfbp.runnable
-    def evaluate(self, data_loader):
-        n = 0
-        accuracy = 0
+    def accuracy(self, data_loader):
         test_data = data_loader()
+
+        # Running average.
+        total_acc = 0.0
+        i = 0.0
         for x, y in test_data:
-            true_pos = tf.math.equal(y, tf.math.argmax(self(x), axis=-1))
-            for i in true_pos.numpy():
-                n += 1
-                accuracy += (i - accuracy) / n
-        print(accuracy)
+            batch_acc = tf.math.equal(y, tf.math.argmax(self(x), axis=-1))
+            batch_acc = tf.cast(batch_acc, tf.float32)
+            for acc in batch_acc:
+                i += 1
+                total_acc += (acc - total_acc) / i
+
+        tf.print(total_acc)
+        return total_acc
